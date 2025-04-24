@@ -1,6 +1,3 @@
-project('iocp_http_server', 'c',
-  version: '0.1',
-  default_options: ['warning_level=3', 'buildtype=debug']
-)
+project('iocp_http', 'c', default_options: ['c_std=c99'])
 
-subdir('src')
+executable('iocp_http', 'src/main.c')
