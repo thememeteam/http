@@ -51,7 +51,15 @@ int main()
 		body = body ? body + 4 : "";
 
 		char out_buf[BUFFER_SIZE];
-		snprintf(out_buf, BUFFER_SIZE, "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %lu\r\n\r\n%s\r\n", strlen(body) + 2, body);
+
+		snprintf(out_buf,
+			BUFFER_SIZE,
+			"HTTP/1.1 200 OK\r\n"
+			"Content-Type: text/plain\r\n"
+			"Connection: close\r\n"
+			"Content-Length: %lu\r\n"
+			"\r\n"
+			"%s\r\n", strlen(body) + 2, body);
 
 		send(client_fd, out_buf, strlen(out_buf), 0);
 		close(client_fd);

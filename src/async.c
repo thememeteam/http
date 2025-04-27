@@ -64,6 +64,7 @@ void add_write_request(int client_fd, char* buf, int len)
     data->client_fd = client_fd;
     data->buf = buf;
     struct io_uring_sqe* sqe = io_uring_get_sqe(&ring);
+
     io_uring_sqe_set_data(sqe, data);
     io_uring_prep_write(sqe, client_fd, buf, len, 0);
 }
@@ -88,7 +89,7 @@ int main()
 
 	s = listen(sockfd, SOMAXCONN);
 
-    io_uring_queue_init(256, &ring, 0);
+    io_uring_queue_init(512, &ring, 0);
 
     add_accept_request();
 
@@ -113,22 +114,28 @@ int main()
                     break;
     
                 case EVENT_READ:
+                    if(cqe->res == 0)
+                    {
+                        close(data->client_fd);
+                        free(data->buf);
+                        free(data);
+                        break;
+                    }
+
                     char* in_buf = data->buf;
                     char *body = strstr(in_buf, "\r\n\r\n");
                     body = body ? body + 4 : "";
     
                     char* out_buf = malloc(BUF_SIZE);
 
-                    snprintf(out_buf, BUF_SIZE, "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %lu\r\n\r\n%s\r\n", strlen(body) + 2, body);
-
-                    // strcpy(out_buf, "HTTP/1.1 200 OK\r\n");
-                    // strcat(out_buf, "Content-Type: text/plain\r\n");
-                    // char lengthLine[128];
-                    // sprintf(lengthLine, "Content-Length: %lu\r\n", strlen(body) + 2);
-                    // strcat(out_buf, lengthLine);
-                    // strcat(out_buf, "\r\n");
-                    // strcat(out_buf, body);
-                    // strcat(out_buf, "\r\n");
+                    snprintf(out_buf,
+                        BUF_SIZE,
+                        "HTTP/1.1 200 OK\r\n"
+                        "Content-Type: text/plain\r\n"
+                        "Connection: keep-alive\r\n"
+                        "Content-Length: %lu\r\n"
+                        "\r\n"
+                        "%s\r\n", strlen(body) + 2, body);
     
                     add_write_request(data->client_fd, out_buf, strlen(out_buf));
     
@@ -137,9 +144,12 @@ int main()
                     break;
     
                 case EVENT_WRITE:
-                    close(data->client_fd);
+                    int client_fd = data->client_fd;
                     free(data->buf);
                     free(data);
+
+                    add_read_request(client_fd);
+
                     break;
             }
             i++;
