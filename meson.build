@@ -3,4 +3,6 @@ executable('http', 'src/main.c')
 
 uring = dependency('liburing')
 
-executable('async-http', 'src/async.c', dependencies: [uring])
+executable('uring-http', 'src/uring.c', dependencies: [uring])
+
+executable('epoll-http', 'src/epoll.c')
